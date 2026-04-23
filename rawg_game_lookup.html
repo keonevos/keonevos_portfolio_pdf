@@ -1,0 +1,207 @@
+
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font-mono, monospace); }
+  .wrap { padding: 1.5rem 0; }
+  .title { font-size: 11px; letter-spacing: 0.15em; color: var(--color-text-secondary); text-transform: uppercase; margin-bottom: 1.5rem; }
+  .api-row { display: flex; gap: 8px; margin-bottom: 1rem; }
+  .api-row input { flex: 1; font-family: var(--font-mono); font-size: 13px; }
+  .search-row { display: flex; gap: 8px; margin-bottom: 1.5rem; }
+  .search-row input { flex: 1; font-size: 15px; }
+  button { cursor: pointer; font-family: var(--font-mono); font-size: 12px; }
+  .btn-search { padding: 0 20px; font-size: 14px; background: var(--color-text-primary); color: var(--color-background-primary); border: none; border-radius: var(--border-radius-md); letter-spacing: 0.05em; }
+  .btn-search:hover { opacity: 0.85; }
+  .btn-search:disabled { opacity: 0.4; cursor: not-allowed; }
+  .results { display: none; }
+  .game-header { display: flex; gap: 16px; align-items: flex-start; margin-bottom: 1.5rem; padding-bottom: 1.5rem; border-bottom: 0.5px solid var(--color-border-tertiary); }
+  .game-cover { width: 80px; height: 56px; border-radius: var(--border-radius-md); object-fit: cover; border: 0.5px solid var(--color-border-tertiary); background: var(--color-background-secondary); flex-shrink: 0; }
+  .game-title { font-size: 18px; font-weight: 500; color: var(--color-text-primary); margin-bottom: 4px; font-family: var(--font-sans); }
+  .game-meta { font-size: 12px; color: var(--color-text-secondary); letter-spacing: 0.04em; }
+  .fields { display: grid; gap: 8px; }
+  .field { background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 10px 14px; display: flex; align-items: center; gap: 10px; }
+  .field-label { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-text-tertiary); min-width: 90px; flex-shrink: 0; }
+  .field-value { font-size: 13px; color: var(--color-text-primary); flex: 1; font-family: var(--font-sans); line-height: 1.4; }
+  .field-value.empty { color: var(--color-text-tertiary); font-style: italic; }
+  .copy-btn { font-size: 11px; padding: 3px 9px; border-radius: var(--border-radius-md); border: 0.5px solid var(--color-border-secondary); background: transparent; color: var(--color-text-secondary); letter-spacing: 0.04em; flex-shrink: 0; transition: all 0.15s; }
+  .copy-btn:hover { background: var(--color-background-tertiary); color: var(--color-text-primary); }
+  .copy-btn.copied { color: var(--color-text-success); border-color: var(--color-border-success); }
+  .copy-all { width: 100%; margin-top: 12px; padding: 10px; border: 0.5px solid var(--color-border-secondary); border-radius: var(--border-radius-md); background: transparent; color: var(--color-text-secondary); letter-spacing: 0.08em; text-transform: uppercase; font-size: 11px; transition: all 0.15s; }
+  .copy-all:hover { background: var(--color-background-secondary); color: var(--color-text-primary); }
+  .copy-all.copied { color: var(--color-text-success); border-color: var(--color-border-success); }
+  .status { font-size: 12px; color: var(--color-text-secondary); margin-bottom: 1rem; min-height: 18px; font-family: var(--font-mono); }
+  .status.error { color: var(--color-text-danger); }
+  .platforms-grid { display: flex; flex-wrap: wrap; gap: 4px; }
+  .platform-tag { font-size: 11px; padding: 2px 8px; border-radius: 20px; border: 0.5px solid var(--color-border-tertiary); color: var(--color-text-secondary); font-family: var(--font-mono); }
+  .section-hint { font-size: 11px; color: var(--color-text-tertiary); margin-bottom: 1rem; line-height: 1.6; padding: 10px 12px; border-left: 2px solid var(--color-border-secondary); }
+  .alt-results { margin-top: 1rem; }
+  .alt-label { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-text-tertiary); margin-bottom: 6px; }
+  .alt-list { display: flex; flex-wrap: wrap; gap: 6px; }
+  .alt-btn { font-size: 12px; padding: 4px 12px; border-radius: var(--border-radius-md); border: 0.5px solid var(--color-border-tertiary); background: transparent; color: var(--color-text-secondary); cursor: pointer; font-family: var(--font-sans); }
+  .alt-btn:hover { border-color: var(--color-border-primary); color: var(--color-text-primary); }
+  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--color-border-secondary); border-top-color: var(--color-text-primary); border-radius: 50%; animation: spin 0.6s linear infinite; vertical-align: middle; margin-right: 6px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+
+<div class="wrap">
+  <p class="title">// game lookup — rawg.io api</p>
+
+  <div class="section-hint">
+    Get a free API key at <strong>rawg.io/apidocs</strong> — paste it below, then search any game to auto-fill your Proton Sheet.
+  </div>
+
+  <div class="api-row">
+    <input type="password" id="apiKey" placeholder="RAWG API key (free at rawg.io/apidocs)" autocomplete="off" />
+  </div>
+
+  <div class="search-row">
+    <input type="text" id="searchInput" placeholder="Search a game... (ex: Elden Ring, Hades, Celeste)" />
+    <button class="btn-search" id="searchBtn" onclick="searchGame()">Search</button>
+  </div>
+
+  <div class="status" id="status"></div>
+  <div class="results" id="results"></div>
+</div>
+
+<script>
+let currentGame = null;
+
+async function searchGame() {
+  const key = document.getElementById('apiKey').value.trim();
+  const query = document.getElementById('searchInput').value.trim();
+  const status = document.getElementById('status');
+  const results = document.getElementById('results');
+
+  if (!key) { status.textContent = '! enter your rawg api key first'; status.className = 'status error'; return; }
+  if (!query) { status.textContent = '! enter a game name'; status.className = 'status error'; return; }
+
+  status.innerHTML = '<span class="spinner"></span>searching...';
+  status.className = 'status';
+  results.style.display = 'none';
+  document.getElementById('searchBtn').disabled = true;
+
+  try {
+    const res = await fetch(`https://api.rawg.io/api/games?key=${encodeURIComponent(key)}&search=${encodeURIComponent(query)}&page_size=6`);
+    if (!res.ok) throw new Error(`API error ${res.status}`);
+    const data = await res.json();
+    if (!data.results || data.results.length === 0) {
+      status.textContent = '! no game found for "' + query + '"'; status.className = 'status error';
+      document.getElementById('searchBtn').disabled = false; return;
+    }
+    await loadGame(data.results[0], key, data.results.slice(1), query);
+  } catch(e) {
+    status.textContent = '! ' + (e.message.includes('401') ? 'invalid api key' : e.message);
+    status.className = 'status error';
+  }
+  document.getElementById('searchBtn').disabled = false;
+}
+
+async function loadGame(game, key, alternatives, originalQuery) {
+  const status = document.getElementById('status');
+  status.innerHTML = '<span class="spinner"></span>loading details...';
+
+  try {
+    const res = await fetch(`https://api.rawg.io/api/games/${game.id}?key=${encodeURIComponent(key)}`);
+    const detail = await res.json();
+    currentGame = detail;
+    renderGame(detail, alternatives, key, originalQuery);
+    status.textContent = '';
+  } catch(e) {
+    status.textContent = '! could not load game details'; status.className = 'status error';
+  }
+}
+
+function renderGame(g, alternatives, key, originalQuery) {
+  const results = document.getElementById('results');
+  results.style.display = 'block';
+
+  const developers = g.developers?.map(d => d.name).join(', ') || '';
+  const publishers = g.publishers?.map(p => p.name).join(', ') || '';
+  const platforms = g.platforms?.map(p => p.platform.name) || [];
+  const releaseDate = g.released || '';
+  const rating = '';
+
+  const platformTags = platforms.map(p => `<span class="platform-tag">${p}</span>`).join('');
+  const platformStr = platforms.join(' / ');
+
+  const altBtns = alternatives.map(a =>
+    `<button class="alt-btn" onclick="selectAlt(${a.id}, '${encodeURIComponent(key)}', '${encodeURIComponent(originalQuery)}')">${a.name}</button>`
+  ).join('');
+
+  results.innerHTML = `
+    <div class="game-header">
+      ${g.background_image ? `<img class="game-cover" src="${g.background_image}" alt="${g.name}" />` : '<div class="game-cover"></div>'}
+      <div>
+        <div class="game-title">${g.name}</div>
+        <div class="game-meta">${g.released || 'Unknown release'} &middot; ${g.metacritic ? 'Metacritic: ' + g.metacritic : 'No metacritic score'}</div>
+      </div>
+    </div>
+
+    <div class="fields">
+      ${field('Developer', developers || '—', 'developer')}
+      ${field('Publisher', publishers || '—', 'publisher')}
+      ${field('Platforms', platforms.length ? `<div class="platforms-grid">${platformTags}</div>` : '—', 'platforms', platformStr)}
+      ${field('Release Date', releaseDate || '—', 'release')}
+      ${field('Region', '🌍 World', 'region')}
+    </div>
+
+    <button class="copy-all" id="copyAllBtn" onclick="copyAll('${escStr(g.name)}', '${escStr(developers)}', '${escStr(publishers)}', '${escStr(platformStr)}', '${escStr(releaseDate)}')">
+      copy full row (tab-separated) — paste directly into proton sheet
+    </button>
+
+    ${alternatives.length ? `
+    <div class="alt-results">
+      <p class="alt-label">other results for "${originalQuery}"</p>
+      <div class="alt-list">${altBtns}</div>
+    </div>` : ''}
+  `;
+}
+
+function field(label, valueHtml, id, rawValue) {
+  const isEmpty = valueHtml === '—';
+  return `
+    <div class="field">
+      <span class="field-label">${label}</span>
+      <span class="field-value${isEmpty ? ' empty' : ''}" id="val-${id}">${valueHtml}</span>
+      <button class="copy-btn" id="btn-${id}" onclick="copyField('${id}', '${rawValue || ''}')">copy</button>
+    </div>`;
+}
+
+function escStr(s) { return (s||'').replace(/'/g, "\\'").replace(/"/g, '\\"'); }
+
+function copyField(id, rawValue) {
+  const el = document.getElementById(`val-${id}`);
+  const txt = rawValue || el.innerText.trim();
+  navigator.clipboard.writeText(txt);
+  const btn = document.getElementById(`btn-${id}`);
+  btn.textContent = 'done'; btn.className = 'copy-btn copied';
+  setTimeout(() => { btn.textContent = 'copy'; btn.className = 'copy-btn'; }, 1800);
+}
+
+function copyAll(name, dev, pub, platforms, date) {
+  const row = [name, dev, pub, platforms, date, '🌍 World', '', 'No', ''].join('\t');
+  navigator.clipboard.writeText(row);
+  const btn = document.getElementById('copyAllBtn');
+  btn.textContent = 'copied! paste with Ctrl+V (or Cmd+V) into your sheet';
+  btn.className = 'copy-all copied';
+  setTimeout(() => { btn.textContent = 'copy full row (tab-separated) — paste directly into proton sheet'; btn.className = 'copy-all'; }, 2500);
+}
+
+async function selectAlt(id, encodedKey, encodedQuery) {
+  const key = decodeURIComponent(encodedKey);
+  const originalQuery = decodeURIComponent(encodedQuery);
+  const status = document.getElementById('status');
+  status.innerHTML = '<span class="spinner"></span>loading...';
+  try {
+    const res = await fetch(`https://api.rawg.io/api/games/${id}?key=${encodeURIComponent(key)}`);
+    const detail = await res.json();
+    renderGame(detail, [], key, originalQuery);
+    status.textContent = '';
+  } catch(e) {
+    status.textContent = '! could not load game'; status.className = 'status error';
+  }
+}
+
+document.getElementById('searchInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') searchGame();
+});
+</script>
